@@ -1,50 +1,63 @@
-    
-```markdown
-# 🚀 ReyzCloud QRIS Deposit Bot
+<div align="center">
 
-[![Version](https://img.shields.io/badge/Version-15.0.0-blue.svg)](https://github.com/ReyZ4YouXGod/BotQris)
-[![Platform](https://img.shields.io/badge/Platform-Telegram-brightgreen.svg)](https://t.me/ReyCloudDev)
-[![Developer](https://img.shields.io/badge/Developer-ReyCloudDev-orange.svg)](https://t.me/ReyCloudDev)
+# ⚡ ReyzCloud QRIS Payment
+### **Automated Deposit System for High-Performance Hosting**
 
-Bot Telegram otomatis untuk sistem deposit **ReyzCloud** menggunakan integrasi API **Pakasir**. Bot ini dirancang untuk kemudahan transaksi hosting dengan verifikasi pembayaran real-time.
-
----
-
-## 📌 Fitur Utama
-
-*   ✅ **QRIS Otomatis**: Menghasilkan kode QRIS unik secara instan via API Pakasir.
-*   ✅ **Disco Buttons**: Tombol menu interaktif yang berganti warna (kedap-kedip).
-*   ✅ **Real-time Polling**: Sistem pengecekan status transaksi otomatis setiap 8 detik.
-*   ✅ **Channel Logs**: Pengiriman laporan transaksi sukses ke ID Channel tujuan secara otomatis.
-*   ✅ **Video Intro**: Tampilan menu utama menggunakan video premium untuk kesan profesional.
-*   ✅ **Multi-Platform**: Support berjalan lancar di **Termux**, **VPS**, maupun **Panel Pterodactyl**.
+[![Telegram](https://img.shields.io/badge/Telegram-ReyCloudDev-26A5E4?style=for-the-badge&logo=telegram)](https://t.me/ReyCloudDev)
+[![NodeJS](https://img.shields.io/badge/Node.js-v16+-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org)
+[![Pakasir](https://img.shields.io/badge/API-Pakasir-FF0000?style=for-the-badge)](https://app.pakasir.com)
 
 ---
 
-## 🛠️ Persiapan & Konfigurasi
+<p align="center">
+  <b>Bot deposit otomatis tercanggih untuk ekosistem ReyzCloud.</b><br>
+  <i>Efisien, Aman, dan Super Cepat.</i>
+</p>
 
-### 1. Clone Repository
-```bash
-git clone https://github.com/ReyZ4YouXGod/BotQris.git
-cd BotQris
+[Fitur](#-fitur-utama) • [Konfigurasi](#-setup-konfigurasi) • [Termux](#-instalasi-termux) • [Pterodactyl](#-instalasi-panel)
+
+</div>
+
+---
+
+## 💎 Fitur Utama
+
+| Fitur | Deskripsi |
+| :--- | :--- |
+| 🚀 **Instant QRIS** | Generate QRIS dinamis dalam hitungan detik via Pakasir API. |
+| 🌈 **Disco UI** | Tampilan menu dengan tombol animasi yang menarik perhatian user. |
+| 🤖 **Auto-Checking** | Validasi pembayaran otomatis tanpa perlu cek mutasi manual. |
+| 📊 **Log Channel** | Laporan transaksi masuk langsung ke channel admin secara real-time. |
+| 🎬 **Media Intro** | Pesan selamat datang menggunakan video untuk kesan premium. |
+
+---
+
+## ⚙️ Setup Konfigurasi
+
+Buka file `config.js` dan lengkapi datanya agar bot sinkron dengan akun kamu:
+
+```javascript
+module.exports = {
+    botToken: '7805124868:AAFZtImH0qfvy...', // Token dari BotFather
+    adminUsername: '@ReyCloudDev',
+    channelLogId: '-100xxxxxxxxx',         // ID Channel untuk laporan
+    pakasir: {
+        project: "depodomain",             // Nama project di Pakasir
+        api_key: "API_KEY_ANDA",           // API Key dari Dashboard
+        base_url: "[https://app.pakasir.com/api](https://app.pakasir.com/api)"
+    }
+};
+
 
 pkg update && pkg upgrade -y
 
-pkg install nodejs -y
+pkg install nodejs git -y
+
+git clone https://github.com/ReyZ4YouXGod/BotQris.git
+
+cd BotQris
 
 npm install
 
 node index.js
 
-module.exports = {
-    botToken: '7805124868:AAFZtImH0qfvyddaX2ba4NwXEPy55k6n04I',
-    adminUsername: '@ReyCloudDev',
-    channelLogId: '-100xxxxxxxxx', // Ganti dengan ID Channel Log Anda
-    pakasir: {
-        project: "depodomain",
-        api_key: "API_KEY_ANDA",
-        base_url: "https://app.pakasir.com/api"
-    },
-    videoIntro: 'https://k.top4top.io/m_37841mg1e4.mp4',
-    notes: 'System Bot Ini Hanya digunakan untuk deposit ReyCloud!'
-};
