@@ -1,5 +1,4 @@
-    node index.js
-    Siap, Bang Rey! Ini teks lengkap **README.md** dengan format **Full Markdown**. Semuanya sudah saya rangkum jadi satu blok kode supaya Abang tinggal sekali klik "Copy" dan tempel di GitHub.
+    
 ```markdown
 # 🚀 ReyzCloud QRIS Deposit Bot
 
