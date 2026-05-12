@@ -40,14 +40,14 @@ ${config.assets.notes}
             caption: caption,
             parse_mode: 'HTML',
             ...Markup.inlineKeyboard([
-                [Markup.button.url("Developers ⏰", "https://t.me/dickyfox27")],
+                [Markup.button.url("Developers ⏰", "https://t.me/ReyCloudDev")],
                 [Markup.button.callback("Deposit QRIS 💳", "deposit")],
-                [Markup.button.url("Channels 📡", "https://t.me/PollingArc")]
+                [Markup.button.url("Channels 📡", "https://t.me/AboutReyZ4You")]
             ])
         });
-    } catch (e) {
+    /*} catch (e) {
         ctx.reply("Welcome to ReyzCloud! Gunakan /bayar [nominal]");
-    }
+    }*/
 });
 
 bot.command('bayar', async (ctx) => {
