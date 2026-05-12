@@ -1,13 +1,13 @@
-const TelegramBot = require('node-telegram-bot-api');
+const { Telegraf, Markup } = require('telegraf');
 const axios = require('axios');
 const QRCode = require('qrcode');
 const config = require('./config');
 
-const bot = new TelegramBot(config.botToken, { polling: true });
-const buttonIntervals = new Map();
+const bot = new Telegraf(config.botToken);
+
 const activeIntervals = {};
 
-// Helper: Hitung Runtime
+// Helper: Uptime
 const getBotRuntime = () => {
     const uptime = process.uptime();
     const hours = Math.floor(uptime / 3600);
@@ -15,69 +15,52 @@ const getBotRuntime = () => {
     return `${hours}j ${minutes}m`;
 };
 
-// Fungsi Disco (Tombol Kedap-kedip)
-function startDisco(chatId, messageId) {
-    let index = 0;
-    const interval = setInterval(async () => {
-        index = (index + 1) % 3;
-        try {
-            await bot.editMessageReplyMarkup({
-                inline_keyboard: [
-                    [{ text: "Developer", url: "https://t.me/ReyCloudDev" }],
-                    [{ text: "Deposit QRIS ", callback_data: "deposit" }],
-                    [{ text: "Channel", url: "https://t.me/AboutReyZ4You" }]
-                ]
-            }, { chat_id: chatId, message_id: messageId });
-        } catch (e) {}
-    }, 1500);
-    buttonIntervals.set(messageId, interval);
-}
+// --- MIDDLEWARE & ERROR HANDLING ---
+bot.catch((err, ctx) => {
+    console.error(`Telegraf Error for ${ctx.updateType}:`, err);
+});
 
-// Handler /start
-bot.onText(/\/start/, async (msg) => {
-    const chatId = msg.chat.id;
+// --- COMMANDS ---
+
+bot.start(async (ctx) => {
     const runtime = getBotRuntime();
-    
     const caption = `
 <blockquote><strong>
 — ReyzCloud Bots
-▫️ Developer : ${config.adminUsername}
-▫️ Version : 1.0.0
+▫️ Status : Online 🟢
+▫️ Version : 15.0.0 (Telegraf)
 ▫️ RunTime : ${runtime}
 
 — Notes :
-${config.notes}
+${config.assets.notes}
 </strong></blockquote>`;
 
     try {
-        const sent = await bot.sendVideo(chatId, config.videoIntro, {
+        await ctx.replyWithVideo(config.assets.videoIntro, {
             caption: caption,
-            parse_mode: "HTML",
-            reply_markup: {
-                inline_keyboard: [
-                    [{ text: "Developer", url: "https://t.me/ReyCloudDev" }],
-                    [{ text: "Deposit QRIS ", callback_data: "deposit" }],
-                    [{ text: "Channel", url: "https://t.me/AboutReyZ4You" }]
-                ]
-            }
+            parse_mode: 'HTML',
+            ...Markup.inlineKeyboard([
+                [Markup.button.url("Developers ⏰", "https://t.me/dickyfox27")],
+                [Markup.button.callback("Deposit QRIS 💳", "deposit")],
+                [Markup.button.url("Channels 📡", "https://t.me/PollingArc")]
+            ])
         });
-        startDisco(chatId, sent.message_id);
     } catch (e) {
-        bot.sendMessage(chatId, "Selamat datang! Gunakan /bayar [nominal] untuk deposit.");
+        ctx.reply("Welcome to ReyzCloud! Gunakan /bayar [nominal]");
     }
 });
 
-// Handler /bayar
-bot.onText(/\/bayar (\d+)/, async (msg, match) => {
-    const chatId = msg.chat.id;
-    const amount = parseInt(match[1]);
-    const user = msg.from;
-    const username = user.username ? `@${user.username}` : user.first_name;
-    
-    if (amount < 1000) return bot.sendMessage(chatId, "❌ Minimal deposit Rp 1.000");
-    
+bot.command('bayar', async (ctx) => {
+    const text = ctx.message.text.split(' ');
+    if (text.length < 2) return ctx.reply("❌ Format salah! Contoh: /bayar 10000");
+
+    const amount = parseInt(text[1]);
+    const username = ctx.from.username ? `@${ctx.from.username}` : ctx.from.first_name;
+
+    if (isNaN(amount) || amount < 1000) return ctx.reply("❌ Minimal Rp 1.000");
+
     const order_id = "RC-" + Date.now();
-    bot.sendMessage(chatId, "⏳ Memproses QRIS...");
+    const loading = await ctx.reply("⏳ Generating QRIS...");
 
     try {
         const response = await axios.post(`${config.pakasir.base_url}/transactioncreate/qris`, {
@@ -88,49 +71,58 @@ bot.onText(/\/bayar (\d+)/, async (msg, match) => {
         });
 
         if (response.data.qr_string) {
-            const qrBuffer = await QRCode.toBuffer(response.data.qr_string, { scale: 7 });
-            await bot.sendPhoto(chatId, qrBuffer, {
-                caption: `✅ <b>QRIS DEPOSIT</b>\n\nID: <code>${order_id}</code>\nTotal: <b>Rp ${amount.toLocaleString('id-ID')}</b>\n\nStatus otomatis dicek setiap 8 detik.`,
-                parse_mode: "HTML",
-                reply_markup: {
-                    inline_keyboard: [[{ text: "❌ Batalkan", callback_data: `cancel_${order_id}_${amount}` }]]
-                }
+            await ctx.deleteMessage(loading.message_id);
+            const qrBuffer = await QRCode.toBuffer(response.data.qr_string, { scale: 8 });
+            
+            await ctx.replyWithPhoto({ source: qrBuffer }, {
+                caption: `✅ <b>PEMBAYARAN QRIS</b>\n\nID: <code>${order_id}</code>\nNominal: <b>Rp ${amount.toLocaleString('id-ID')}</b>\n\n<i>Silakan scan dan bayar, status akan otomatis terdeteksi.</i>`,
+                parse_mode: 'HTML',
+                ...Markup.inlineKeyboard([
+                    [Markup.button.callback("❌ Batalkan", `cancel_${order_id}_${amount}`)]
+                ])
             });
-            startCheckStatus(chatId, order_id, amount, username);
+
+            startCheckStatus(ctx, order_id, amount, username);
         }
     } catch (e) {
-        bot.sendMessage(chatId, "❌ Gagal menghubungi API Pakasir.");
+        ctx.reply("❌ Gagal menghubungi API Pakasir.");
     }
 });
 
-// Handler Button Callback
-bot.on('callback_query', async (query) => {
-    const chatId = query.message.chat.id;
-    const messageId = query.message.message_id;
-    const data = query.data;
+// --- CALLBACK HANDLERS ---
 
-    if (data === "deposit") {
-        bot.sendMessage(chatId, "📌 <b>Cara Deposit:</b>\nKetik perintah <code>/bayar [nominal]</code>\nContoh: <code>/bayar 10000</code>", { parse_mode: "HTML" });
-    }
-
-    if (data.startsWith('cancel_')) {
-        const [_, order_id, amount] = data.split('_');
-        try {
-            await axios.post(`${config.pakasir.base_url}/transactioncancel`, {
-                project: config.pakasir.project,
-                order_id: order_id,
-                amount: parseInt(amount),
-                api_key: config.pakasir.api_key
-            });
-            if (activeIntervals[order_id]) clearInterval(activeIntervals[order_id]);
-            bot.editMessageCaption("❌ <b>DEPOSIT DIBATALKAN</b>", { chat_id: chatId, message_id: messageId, parse_mode: "HTML" });
-        } catch (e) {}
-    }
-    bot.answerCallbackQuery(query.id);
+bot.action('deposit', (ctx) => {
+    ctx.replyWithHTML("📌 Ketik: <code>/bayar [nominal]</code>\nContoh: <code>/bayar 50000</code>");
+    ctx.answerCbQuery();
 });
 
-// Polling Status Pembayaran
-function startCheckStatus(chatId, order_id, amount, username) {
+bot.action(/cancel_(.+)_(.+)/, async (ctx) => {
+    const order_id = ctx.match[1];
+    const amount = ctx.match[2];
+
+    try {
+        await axios.post(`${config.pakasir.base_url}/transactioncancel`, {
+            project: config.pakasir.project,
+            order_id: order_id,
+            amount: parseInt(amount),
+            api_key: config.pakasir.api_key
+        });
+
+        if (activeIntervals[order_id]) {
+            clearInterval(activeIntervals[order_id]);
+            delete activeIntervals[order_id];
+        }
+
+        await ctx.editMessageCaption("❌ <b>TRANSAKSI DIBATALKAN</b>", { parse_mode: 'HTML' });
+    } catch (e) {
+        ctx.answerCbQuery("Gagal membatalkan.");
+    }
+    ctx.answerCbQuery();
+});
+
+// --- CORE LOGIC ---
+
+function startCheckStatus(ctx, order_id, amount, username) {
     activeIntervals[order_id] = setInterval(async () => {
         try {
             const url = `${config.pakasir.base_url}/transactiondetail?project=${config.pakasir.project}&amount=${amount}&order_id=${order_id}&api_key=${config.pakasir.api_key}`;
@@ -142,23 +134,26 @@ function startCheckStatus(chatId, order_id, amount, username) {
 
                 const waktu = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
 
-                // Notif User
-                bot.sendMessage(chatId, `🎊 <b>DEPOSIT BERHASIL!</b>\n\nID: <code>${order_id}</code>\nSaldo Anda sudah diperbarui.`, { parse_mode: "HTML" });
+                await ctx.replyWithHTML(`🎊 <b>DEPOSIT BERHASIL!</b>\n\nID: <code>${order_id}</code>\nSaldo otomatis masuk ke akun ReyzCloud.`);
 
-                // Kirim Log ke Channel
-                const logMsg = `🔔 <b>DEPOSIT BERHASIL!</b>\n\n` +
-                               `👤 <b>User:</b> ${username}\n` +
-                               `💰 <b>Nominal:</b> Rp ${amount.toLocaleString('id-ID')}\n` +
-                               `📅 <b>Waktu:</b> ${waktu} WIB\n` +
-                               `🆔 <b>Order ID:</b> <code>${order_id}</code>\n\n` +
-                               `Note: ${config.notes}`;
+                const logMsg = `🔔 <b>LOG DEPOSIT MASUK</b>\n\n👤 User: ${username}\n💰 Nominal: Rp ${amount.toLocaleString('id-ID')}\n📅 Waktu: ${waktu} WIB\n🆔 Order ID: <code>${order_id}</code>\n\n${config.assets.notes}`;
                 
-                bot.sendMessage(config.channelLogId, logMsg, { parse_mode: "HTML" });
+                await ctx.telegram.sendMessage(config.channelLogId, logMsg, { parse_mode: 'HTML' });
             }
-        } catch (e) {}
+        } catch (e) {
+            // Silently fail to keep polling
+        }
     }, 8000);
 }
 
-console.log("===============================");
-console.log("   REYZCLOUD BOT STARTED...   ");
-console.log("===============================");
+// --- START BOT ---
+bot.launch().then(() => {
+    console.log("===============================");
+    console.log("   REYZCLOUD TELEGRAF ACTIVE   ");
+    console.log("   DEPLOYED ON PTERODACTYL     ");
+    console.log("===============================");
+});
+
+// Enable graceful stop
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
