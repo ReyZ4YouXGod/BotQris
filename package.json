@@ -1,0 +1,16 @@
+{
+  "name": "reyzcloud-qris-bot",
+  "version": "1.0.0",
+  "description": "Bot Deposit Otomatis QRIS Pakasir for ReyzCloud",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "node-telegram-bot-api": "^0.64.0",
+    "qrcode": "^1.5.3"
+  },
+  "author": "ReyCloudDev",
+  "license": "MIT"
+}
